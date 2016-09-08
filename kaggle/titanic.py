@@ -51,8 +51,7 @@ y = train.Survived
 
 X_train, X_val, y_train, y_val = train_test_split(X, y, train_size = 0.6, random_state=0)
 
-clf = LogisticRegression()
-clf.fit(X_train, y_train)
+clf = LogisticRegression(solver='lbfgs')
  
 def find_C(X, y):
     Cs = np.logspace(-4, 4, 10)
@@ -61,11 +60,13 @@ def find_C(X, y):
         clf.C = C
         clf.fit(X_train, y_train)
         error.append(clf.score(X, y))
-        
+  
     plt.figure()
-    plt.semilogx(Cs, error)
+    plt.semilogx(Cs, error, marker='x')
     plt.xlabel('Value of C')
-    plt.ylabel('Score on Cross Validation Set')
-    plt.title('Optimal Value of C')
+    plt.ylabel('Accuracy on Cross Validation Set')
+    plt.title('What\'s the Best Value of C?')
+    clf.C = Cs[error.index(max(error))]
+    print("Ideal value of C is %d" % (Cs[error.index(max(error))]))
     
-clf.C = 1000
+find_C(X_val, y_val)
