@@ -16,6 +16,6 @@ data = pd.concat([train, test])
 data['MSSubClass'] = data.MSSubClass.apply(lambda x: str(x))
 numerical_feats = data.dtypes[data.dtypes != 'object'].index
 data[numerical_feats] = data[numerical_feats].fillna(data[numerical_feats].median())
-data[numerical_feats] = data[numerical_feats].apply(lambda x: x.where(x == 0, np.log(x)))
+data[numerical_feats] = np.log1p(data[numerical_feats])
 data[numerical_feats] = pp.scale(data[numerical_feats])
 data = pd.get_dummies(data, drop_first=True)
