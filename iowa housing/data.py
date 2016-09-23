@@ -4,7 +4,7 @@ from sklearn import preprocessing as pp
 from sklearn.linear_model import LogisticRegression
 import scipy.stats as stats
 from sklearn.cross_validation import train_test_split
-from sklearn.linear_model import Ridge, RidgeCV, ElasticNet, LassoCV, LassoLarsCV
+from sklearn.linear_model import Ridge, RidgeCV, LassoCV
 import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 
@@ -23,6 +23,7 @@ data['MSSubClass'] = data.MSSubClass.apply(lambda x: str(x))
 data.iloc[:, [60,61,8,22,23,24,33,34,35,36,37,41,46,47,52,54,77]] = data.iloc[:, [60,61,8,22,23,24,33,34,35,36,37,41,46,47,52,54,77]].apply(lambda x: x.fillna(x.mode()))
 data['LotFrontage'] = data['LotFrontage'].fillna(data.LotFrontage.median())
 data['MSZoning'] = data['MSZoning'].fillna('RM')
+#Ugly way of filling in categorical data when missing data likely means no data.
 data.iloc[:, [29,30,31,32,58,59,62,63,5,56,57,71,72,73]] = data.iloc[:, [29,30,31,32,58,59,62,63,5,56,57,71,72,73]].apply(lambda x: x.fillna('None'))
 
 numerical_feats = data.dtypes[data.dtypes != 'object'].index
@@ -54,11 +55,17 @@ def find_alpha(X, y):
     plt.title('What\'s the Best Value of C?')
     plt.show()
     clf.alpha = alphas[score.index(max(score))]
-    print("Ideal value of alpha is %g" % (alphas[score.index(max(score))]))
-    print(max(score))
+    print("Ideal value of alpha with Ridge Regression is %g" % (alphas[score.index(max(score))]))
+    print("Peak accuracy is %g" % max(score))
     return score
 
 
 find_alpha(X_val, y_val)
-answer = pd.DataFrame(np.expm1(clf.predict(test)), index=test.index, columns=['SalePrice'])
+
+lasso = LassoCV(cv=10)
+lasso.fit(X, y)
+print ("Peak value of R squared with lasso is %g" % lasso.score(X, y))
+
+
+answer = pd.DataFrame(np.expm1(lasso.predict(test)), index=test.index, columns=['SalePrice'])
 answer.to_csv('C:\Users\Ohio\Documents\GitHub\data-analysis\iowa housing\_answer.csv')
