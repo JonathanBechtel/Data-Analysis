@@ -86,11 +86,10 @@ residuals = results.resid
 cooks_d = outliers.cooks_distance[0]
 influence = outliers.influence
 errors = pd.DataFrame({'residual': residuals, 'Cooks Distance': cooks_d, 'Influence': influence})
-errors['residual_adj'] = np.abs((errors.residual/y) * 100)
 
 #drop outliers, as determined by normalized residuals
-X = X.drop([826, 63, 1325, 463, 524, 1454, 969], axis=0)
-y = y.drop([826, 63, 1325, 463, 524, 1454, 969], axis=0)
+X = X.drop([826, 524, 1171, 1424, 741, 706, 874, 589, 1001, 411], axis=0)
+y = y.drop([826, 524, 1171, 1424, 741, 706, 874, 589, 1001, 411], axis=0)
 
 #initiate Lasso Regression, fit to data
 lasso = LassoCV(cv=10)
