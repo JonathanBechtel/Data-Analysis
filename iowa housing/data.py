@@ -26,16 +26,23 @@ data['MSSubClass'] = data.MSSubClass.apply(lambda x: str(x))
 
 #Ugly way of using the mode to fill empty values for the following columns
 data.iloc[:, [60,61,8,22,23,24,33,34,35,36,37,41,46,47,52,54,77]] = data.iloc[:, [60,61,8,22,23,24,33,34,35,36,37,41,46,47,52,54,77]].apply(lambda x: x.fillna(x.mode()))
+
+#Most Common value for this column that's paired with MSSubClass
 data['MSZoning'] = data['MSZoning'].fillna('RM')
 
 #Ugly way of filling in categorical data when missing data likely means no data.
 data.iloc[:, [29,30,31,32,58,59,62,63,5,56,57,71,72,73]] = data.iloc[:, [29,30,31,32,58,59,62,63,5,56,57,71,72,73]].apply(lambda x: x.fillna('None'))
+
+#creation of new features that capture potential non-linear interactions between important variables
+data['interactions'] = data.GrLivArea * data.OverallCond * data.OverallQual
+data['interactions2'] = data.Neighborhood + data.SaleCondition
 
 #creates index of features that have continuous data
 numerical_feats = data.dtypes[data.dtypes != 'object'].index
 
 #fill remaining values with median of the columns
 data[numerical_feats] = data[numerical_feats].fillna(data[numerical_feats].median())
+
 
 #log transform data for analysis
 data[numerical_feats] = np.log1p(data[numerical_feats])
@@ -87,7 +94,7 @@ cooks_d = outliers.cooks_distance[0]
 influence = outliers.influence
 errors = pd.DataFrame({'residual': residuals, 'Cooks Distance': cooks_d, 'Influence': influence})
 
-#drop outliers, as determined by normalized residuals
+#drop outliers, as determined by Cook's Distance
 X = X.drop([826, 524, 1171, 1424, 741, 706, 874, 589, 1001, 411], axis=0)
 y = y.drop([826, 524, 1171, 1424, 741, 706, 874, 589, 1001, 411], axis=0)
 
