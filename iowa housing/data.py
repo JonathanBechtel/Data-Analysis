@@ -36,6 +36,8 @@ data['MSZoning'] = data['MSZoning'].fillna('RM')
 data.iloc[:, [29,30,31,32,59,62,63,5,56,57,71,72,73]] = data.iloc[:, [29,30,31,32,59,62,63,5,56,57,71,72,73]].apply(lambda x: x.fillna('None'))
 
 #Change categorical data to ordinal data for new interaction terms
+#data[['BsmtCond']] = data[['BsmtCond']].replace(to_replace=['TA', 'Gd', 'Fa', 'None', 'Po'], value=[3,4,2,0,1])
+#data[['BsmtQual']] = data[['BsmtQual']].replace(to_replace=['TA', 'Gd', 'Fa', 'None', 'Po', 'Ex'], value=[3,4,2,0,1,5])
 #data[['FireplaceQu']] = data[['FireplaceQu']].replace(to_replace=['TA', 'Fa', 'Gd', 'Po', 'Ex', 'None'], value=[3,2,4,1,5,0])
 
 #Function to fill in missing values for GarageYrBlt with date house was built.
@@ -43,6 +45,31 @@ def YrBlt(series):
     for index, value in enumerate(series):
         if value != value:
             series.iloc[index] = data['YearBuilt'].iloc[index]
+         
+#Function to categorize YearRemodAdd to see if renovations added any value   
+def isRemodeled(value):
+        if value <= 0:
+            return 'Never'
+        elif 0 < value < 6:
+            return 'Recently'
+        elif 6 <= value < 16:
+            return 'Not Recently'
+        else:
+            return 'Distant Past'
+
+#Function creates a timeseries that numbers each month sequentially
+def timeSeries(series1, series2):
+        for index, year in enumerate(series2):
+            if year == 2006:
+                series1.iloc[index] = 0 + data['MoSold'].iloc[index]
+            elif year == 2007:
+                series1.iloc[index] = 12 + data['MoSold'].iloc[index]
+            elif year == 2008:
+                series1.iloc[index] = 24 + data['MoSold'].iloc[index]
+            elif year == 2009:
+                series1.iloc[index] = 36 + data['MoSold'].iloc[index]
+            else:
+                series1.iloc[index] = 48 + data['MoSold'].iloc[index]
             
 #Call the function to fill the values
 YrBlt(data.GarageYrBlt)
@@ -52,8 +79,13 @@ data['interactions'] = data.GrLivArea * data.OverallCond * data.OverallQual
 data['interactions2'] = data.Neighborhood + data.SaleCondition
 data['garage_added'] = data.GarageYrBlt > data.YearBuilt
 data['garage_added'] = data.garage_added.apply(lambda x: 'yes' if x==True else 'no')
-#data['Fireplace_adj'] = data.Fireplaces * data.FireplaceQu
-#data['Total_baths'] = data.HalfBath + data.FullBath
+data['Remodeled'] = data['YearRemodAdd'] - data['YearBuilt'] 
+data['Remodeled'] = data['Remodeled'].apply(isRemodeled)
+data['Time_Since_Sale'] = 2016 - data['YrSold']
+
+#zero fill new series and then pass it into timeSeries function to get new values
+data['Time_Series'] = pd.Series(np.zeros(len(data)), index=data.index)
+timeSeries(data.Time_Series, data.YrSold)
 
 #creates list of features that have continuous data
 numerical_feats = data.dtypes[data.dtypes != 'object'].index
@@ -94,15 +126,11 @@ y = y.drop([826, 524, 1171, 1424, 741, 706, 874, 589, 1001, 411], axis=0)
 #drop outliers from errors df to make later analysis easier
 errors = errors.drop([826, 524, 1171, 1424, 741, 706, 874, 589, 1001, 411], axis=0)
 
-#initiate Lasso Regression w/ RFECV, fit to data
+#initiate Lasso Regression
 lasso = LassoCV(cv=10)
-#lasso.fit(X, y)
-selector = RFECV(estimator=lasso, step=1, cv=5)
-X_new = selector.fit_transform(X, y)
-print("RFECV removed %d features") % (X.shape[1] - X_new.shape[1])
+lasso.fit(X, y)
+print ("Best RMSE with lasso is %g" % np.sqrt(np.mean((lasso.predict(X)-y)**2)))
 
-print ("Peak value of R squared with lasso is %g" % lasso.score(X_new, y))
-"""
 #create dataframe for answers, write to csv
 answer = pd.DataFrame(np.expm1(lasso.predict(test)), index=test.index, columns=['SalePrice'])
 answer.to_csv('C:\Users\Ohio\Documents\GitHub\data-analysis\iowa housing\_answer.csv')
@@ -122,13 +150,7 @@ plt.figure(0)
 plt.scatter(lasso.predict(X), y, s=errors.residual*350)
 plt.title('Scatter Plot of Housing Prices')
 plt.xlabel('Predicted Prices')
-plt.ylabel('Actual Prices')
-
-#create index variable to label data points
-index = X.index
-largest_errors = errors['residual'].nlargest(10).index
-X_values = pd.Series(lasso.predict(X), index=X.index)
-    
+plt.ylabel('Actual Prices')   
 plt.show()
 
 #histogram of error terms
@@ -138,4 +160,12 @@ plt.title('Distribution of errors for predictions')
 plt.xlabel('Error')
 plt.ylabel('Frequency')
 plt.show()
-"""
+
+##########################################################################
+# Feature Graveyard .... Features that didn't add any value to final score
+##########################################################################
+
+#data['zoning_interaction'] = data.MSSubClass + data.MSZoning
+#data['Fireplace_adj'] = data.Fireplaces * data.FireplaceQu
+#data['Total_baths'] = data.HalfBath + data.FullBath
+#data['basement_interactions'] = data.TotalBsmtSF * data.BsmtCond * data.BsmtQual
